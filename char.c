@@ -1,74 +1,55 @@
 #include "monty.h"
 #include "lists.h"
 
-data_t data = DATA_INIT;
-
 /**
- * monty - helper function for main function
- * @args: pointer to struct of arguments from main
- *
- * Description: opens and reads from the file
- * containing the opcodes, and calls the function
- * that will find the corresponding executing function
+ * pchar_handler - handles the pchar instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
  */
-void monty(args_t *args)
+void pchar_handler(stack_t **stack, unsigned int line_number)
 {
-	size_t len = 0;
-	int get = 0;
-	void (*code_func)(stack_t **, unsigned int);
+	stack_t *node = *stack;
 
-	if (args->ac != 2)
+	if (!node)
 	{
-		dprintf(STDERR_FILENO, USAGE);
+		dprintf(STDERR_FILENO, PCHAR_FAIL, line_number);
+		free_all(1);
 		exit(EXIT_FAILURE);
 	}
-	data.fptr = fopen(args->av, "r");
-	if (!data.fptr)
+
+	if (node->n < 0 || node->n > 127)
 	{
-		dprintf(STDERR_FILENO, FILE_ERROR, args->av);
+		dprintf(STDERR_FILENO, PCHAR_RANGE, line_number);
+		free_all(1);
 		exit(EXIT_FAILURE);
 	}
-	while (1)
-	{
-		args->line_number++;
-		get = getline(&(data.line), &len, data.fptr);
-		if (get < 0)
-			break;
-		data.words = strtow(data.line);
-		if (data.words[0] == NULL || data.words[0][0] == '#')
-		{
-			free_all(0);
-			continue;
-		}
-		code_func = get_func(data.words);
-		if (!code_func)
-		{
-			dprintf(STDERR_FILENO, UNKNOWN, args->line_number, data.words[0]);
-			free_all(1);
-			exit(EXIT_FAILURE);
-		}
-		code_func(&(data.stack), args->line_number);
-		free_all(0);
-	}
-	free_all(1);
+
+	putchar(node->n);
+	putchar('\n');
 }
 
 /**
- * main - entry point for monty bytecode interpreter
- * @argc: number of arguments
- * @argv: array of arguments
- *
- * Return: EXIT_SUCCESS or EXIT_FAILURE
+ * pstr_handler - handles the pstr instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
  */
-int main(int argc, char *argv[])
+void pstr_handler(stack_t **stack, unsigned int line_number)
 {
-	args_t args;
+	stack_t *node = *stack;
 
-	args.av = argv[1];
-	args.ac = argc;
-	args.line_number = 0;
+	(void)line_number;
 
-	monty(&args);
+	if (!node)
+	{
+		putchar('\n');
+		return;
+	}
 
-	return (EXIT_SUCCESS);
+	while (node && node->n != 0 && node->n >= 0 && node->n <= 127)
+	{
+		putchar(node->n);
+		node = node->next;
+	}
+
+	putchar('\n');
 }

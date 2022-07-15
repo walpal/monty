@@ -2,110 +2,96 @@
 #include "lists.h"
 
 /**
- * pint_handler - handles the pint instruction
- * @stack: double pointer to the stack to push to
- * @line_number: number of the line in the file
+ * insert_dnodeint_at_index - inserts a node at a given index
+ * in a doubly linked list
+ * @h: double pointer to the list
+ * @idx: index of the node to insert
+ * @n: data to insert
+ *
+ * Return: address of the new node, or NULL if it failed
  */
-void pint_handler(stack_t **stack, unsigned int line_number)
+dlistint_t *insert_dnodeint_at_index(dlistint_t **h, unsigned int idx, int n)
 {
-	stack_t *head = *stack;
+	unsigned int i;
+	dlistint_t *new;
+	dlistint_t *temp = *h;
+
+	if (idx == 0)
+		return (add_dnodeint(h, n));
+
+	for (i = 0; temp && i < idx; i++)
+	{
+		if (i == idx - 1)
+		{
+			if (temp->next == NULL)
+				return (add_dnodeint_end(h, n));
+			new = malloc(sizeof(dlistint_t));
+			if (!new || !h)
+				return (NULL);
+			new->n = n;
+			new->next = NULL;
+			new->next = temp->next;
+			new->prev = temp;
+			temp->next->prev = new;
+			temp->next = new;
+			return (new);
+		}
+		else
+			temp = temp->next;
+	}
+
+	return (NULL);
+}
+
+/**
+ * add_dnodeint_end - adds a new node at the end of a doubly linked list
+ * @head: double pointer to the list
+ * @n: data to insert in the new node
+ *
+ * Return: the address of the new element, or NULL if it failed
+ */
+dlistint_t *add_dnodeint_end(dlistint_t **head, const int n)
+{
+	dlistint_t *new;
+	dlistint_t *temp = *head;
 
 	if (!head)
+		return (NULL);
+
+	new = malloc(sizeof(dlistint_t));
+	if (!new)
+		return (NULL);
+
+	new->n = n;
+	new->next = NULL;
+
+	if (*head == NULL)
 	{
-		dprintf(STDERR_FILENO, PINT_FAIL, line_number);
-		free_all(1);
-		exit(EXIT_FAILURE);
+		new->prev = NULL;
+		*head = new;
+		return (new);
 	}
 
-	printf("%d\n", head->n);
+	while (temp->next)
+		temp = temp->next;
+
+	temp->next = new;
+	new->prev = temp;
+
+	return (new);
 }
 
 /**
- * pop_handler - handles the pop instruction
- * @stack: double pointer to the stack to push to
- * @line_number: number of the line in the file
+ * free_dlistint - frees a doubly linked list
+ * @head: pointer to the list to free
  */
-void pop_handler(stack_t **stack, unsigned int line_number)
+void free_dlistint(dlistint_t *head)
 {
-	stack_t *temp = *stack;
+	dlistint_t *temp;
 
-	if (!temp)
+	while (head)
 	{
-		dprintf(STDERR_FILENO, POP_FAIL, line_number);
-		free_all(1);
-		exit(EXIT_FAILURE);
+		temp = head->next;
+		free(head);
+		head = temp;
 	}
-
-	delete_dnodeint_at_index(stack, 0);
-}
-
-/**
- * swap_handler - handles the swap instruction
- * @stack: double pointer to the stack to push to
- * @line_number: number of the line in the file
- */
-void swap_handler(stack_t **stack, unsigned int line_number)
-{
-	stack_t *temp = *stack, *node = NULL;
-	int num;
-
-	if (dlistint_len(*stack) < 2)
-	{
-		dprintf(STDERR_FILENO, SWAP_FAIL, line_number);
-		free_all(1);
-		exit(EXIT_FAILURE);
-	}
-
-	temp = get_dnodeint_at_index(*stack, 0);
-	num = temp->n;
-	delete_dnodeint_at_index(stack, 0);
-	node = insert_dnodeint_at_index(stack, 1, num);
-	if (!node)
-	{
-		dprintf(STDERR_FILENO, MALLOC_FAIL);
-		free_all(1);
-		exit(EXIT_FAILURE);
-	}
-}
-
-/**
- * add_handler - handles the add instruction
- * @stack: double pointer to the stack to push to
- * @line_number: number of the line in the file
- */
-void add_handler(stack_t **stack, unsigned int line_number)
-{
-	int sum = 0;
-	stack_t *node = NULL;
-	stack_t *node_0 = get_dnodeint_at_index(*stack, 0);
-	stack_t *node_1 = get_dnodeint_at_index(*stack, 1);
-
-	if (dlistint_len(*stack) < 2)
-	{
-		dprintf(STDERR_FILENO, ADD_FAIL, line_number);
-		free_all(1);
-		exit(EXIT_FAILURE);
-	}
-
-	sum = node_0->n + node_1->n;
-	delete_dnodeint_at_index(stack, 0);
-	delete_dnodeint_at_index(stack, 0);
-	node = add_dnodeint(stack, sum);
-	if (!node)
-	{
-		dprintf(STDERR_FILENO, MALLOC_FAIL);
-		free_all(1);
-		exit(EXIT_FAILURE);
-	}
-}
-
-/**
- * nop_handler - handles the nop instruction
- * @stack: double pointer to the stack to push to
- * @line_number: number of the line in the file
- */
-void nop_handler(stack_t **stack, unsigned int line_number)
-{
-	(void)stack;
-	(void)line_number;
-}

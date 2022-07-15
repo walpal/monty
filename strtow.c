@@ -1,74 +1,93 @@
 #include "monty.h"
 #include "lists.h"
 
-data_t data = DATA_INIT;
-
 /**
- * monty - helper function for main function
- * @args: pointer to struct of arguments from main
+ * count_word - helper function to count the number of words in a string
+ * @s: string to evaluate
  *
- * Description: opens and reads from the file
- * containing the opcodes, and calls the function
- * that will find the corresponding executing function
+ * Return: number of words
  */
-void monty(args_t *args)
+int count_word(char *s)
 {
-	size_t len = 0;
-	int get = 0;
-	void (*code_func)(stack_t **, unsigned int);
+	int flag, c, w;
 
-	if (args->ac != 2)
+	flag = 0;
+	w = 0;
+
+	for (c = 0; s[c] != '\0'; c++)
 	{
-		dprintf(STDERR_FILENO, USAGE);
-		exit(EXIT_FAILURE);
-	}
-	data.fptr = fopen(args->av, "r");
-	if (!data.fptr)
-	{
-		dprintf(STDERR_FILENO, FILE_ERROR, args->av);
-		exit(EXIT_FAILURE);
-	}
-	while (1)
-	{
-		args->line_number++;
-		get = getline(&(data.line), &len, data.fptr);
-		if (get < 0)
-			break;
-		data.words = strtow(data.line);
-		if (data.words[0] == NULL || data.words[0][0] == '#')
+		if (s[c] == ' ')
+			flag = 0;
+		else if (flag == 0)
 		{
-			free_all(0);
-			continue;
+			flag = 1;
+			w++;
 		}
-		code_func = get_func(data.words);
-		if (!code_func)
-		{
-			dprintf(STDERR_FILENO, UNKNOWN, args->line_number, data.words[0]);
-			free_all(1);
-			exit(EXIT_FAILURE);
-		}
-		code_func(&(data.stack), args->line_number);
-		free_all(0);
 	}
-	free_all(1);
+
+	return (w);
+}
+/**
+ * **strtow - splits a string into words
+ * @str: string to split
+ *
+ * Return: pointer to an array of strings (Success)
+ * or NULL (Error)
+ */
+char **strtow(char *str)
+{
+	char **matrix, *tmp;
+	int i, k = 0, len = 0, words, c = 0, start, end;
+
+	len = strlen(str);
+	words = count_word(str);
+	if (words == 0)
+		return (NULL);
+
+	matrix = (char **) malloc(sizeof(char *) * (words + 1));
+	if (matrix == NULL)
+		return (NULL);
+
+	for (i = 0; i <= len; i++)
+	{
+		if (isspace(str[i]) || str[i] == '\0' || str[i] == '\n')
+		{
+			if (c)
+			{
+				end = i;
+				tmp = (char *) malloc(sizeof(char) * (c + 1));
+				if (tmp == NULL)
+					return (NULL);
+				while (start < end)
+					*tmp++ = str[start++];
+				*tmp = '\0';
+				matrix[k] = tmp - c;
+				k++;
+				c = 0;
+			}
+		}
+		else if (c++ == 0)
+			start = i;
+	}
+
+	matrix[k] = NULL;
+
+	return (matrix);
 }
 
 /**
- * main - entry point for monty bytecode interpreter
- * @argc: number of arguments
- * @argv: array of arguments
- *
- * Return: EXIT_SUCCESS or EXIT_FAILURE
+ * free_everything - frees arrays of strings
+ * @args: array of strings to free
  */
-int main(int argc, char *argv[])
+void free_everything(char **args)
 {
-	args_t args;
+	int i;
 
-	args.av = argv[1];
-	args.ac = argc;
-	args.line_number = 0;
+	if (!args)
+		return;
 
-	monty(&args);
+	for (i = 0; args[i]; i++)
+		free(args[i]);
 
-	return (EXIT_SUCCESS);
+	free(args);
 }

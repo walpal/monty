@@ -1,74 +1,111 @@
 #include "monty.h"
 #include "lists.h"
 
-data_t data = DATA_INIT;
-
 /**
- * monty - helper function for main function
- * @args: pointer to struct of arguments from main
- *
- * Description: opens and reads from the file
- * containing the opcodes, and calls the function
- * that will find the corresponding executing function
+ * pint_handler - handles the pint instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
  */
-void monty(args_t *args)
+void pint_handler(stack_t **stack, unsigned int line_number)
 {
-	size_t len = 0;
-	int get = 0;
-	void (*code_func)(stack_t **, unsigned int);
+	stack_t *head = *stack;
 
-	if (args->ac != 2)
+	if (!head)
 	{
-		dprintf(STDERR_FILENO, USAGE);
+		dprintf(STDERR_FILENO, PINT_FAIL, line_number);
+		free_all(1);
 		exit(EXIT_FAILURE);
 	}
-	data.fptr = fopen(args->av, "r");
-	if (!data.fptr)
-	{
-		dprintf(STDERR_FILENO, FILE_ERROR, args->av);
-		exit(EXIT_FAILURE);
-	}
-	while (1)
-	{
-		args->line_number++;
-		get = getline(&(data.line), &len, data.fptr);
-		if (get < 0)
-			break;
-		data.words = strtow(data.line);
-		if (data.words[0] == NULL || data.words[0][0] == '#')
-		{
-			free_all(0);
-			continue;
-		}
-		code_func = get_func(data.words);
-		if (!code_func)
-		{
-			dprintf(STDERR_FILENO, UNKNOWN, args->line_number, data.words[0]);
-			free_all(1);
-			exit(EXIT_FAILURE);
-		}
-		code_func(&(data.stack), args->line_number);
-		free_all(0);
-	}
-	free_all(1);
+
+	printf("%d\n", head->n);
 }
 
 /**
- * main - entry point for monty bytecode interpreter
- * @argc: number of arguments
- * @argv: array of arguments
- *
- * Return: EXIT_SUCCESS or EXIT_FAILURE
+ * pop_handler - handles the pop instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
  */
-int main(int argc, char *argv[])
+void pop_handler(stack_t **stack, unsigned int line_number)
 {
-	args_t args;
+	stack_t *temp = *stack;
 
-	args.av = argv[1];
-	args.ac = argc;
-	args.line_number = 0;
+	if (!temp)
+	{
+		dprintf(STDERR_FILENO, POP_FAIL, line_number);
+		free_all(1);
+		exit(EXIT_FAILURE);
+	}
 
-	monty(&args);
+	delete_dnodeint_at_index(stack, 0);
+}
 
-	return (EXIT_SUCCESS);
+/**
+ * swap_handler - handles the swap instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
+ */
+void swap_handler(stack_t **stack, unsigned int line_number)
+{
+	stack_t *temp = *stack, *node = NULL;
+	int num;
+
+	if (dlistint_len(*stack) < 2)
+	{
+		dprintf(STDERR_FILENO, SWAP_FAIL, line_number);
+		free_all(1);
+		exit(EXIT_FAILURE);
+	}
+
+	temp = get_dnodeint_at_index(*stack, 0);
+	num = temp->n;
+	delete_dnodeint_at_index(stack, 0);
+	node = insert_dnodeint_at_index(stack, 1, num);
+	if (!node)
+	{
+		dprintf(STDERR_FILENO, MALLOC_FAIL);
+		free_all(1);
+		exit(EXIT_FAILURE);
+	}
+}
+
+/**
+ * add_handler - handles the add instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
+ */
+void add_handler(stack_t **stack, unsigned int line_number)
+{
+	int sum = 0;
+	stack_t *node = NULL;
+	stack_t *node_0 = get_dnodeint_at_index(*stack, 0);
+	stack_t *node_1 = get_dnodeint_at_index(*stack, 1);
+
+	if (dlistint_len(*stack) < 2)
+	{
+		dprintf(STDERR_FILENO, ADD_FAIL, line_number);
+		free_all(1);
+		exit(EXIT_FAILURE);
+	}
+
+	sum = node_0->n + node_1->n;
+	delete_dnodeint_at_index(stack, 0);
+	delete_dnodeint_at_index(stack, 0);
+	node = add_dnodeint(stack, sum);
+	if (!node)
+	{
+		dprintf(STDERR_FILENO, MALLOC_FAIL);
+		free_all(1);
+		exit(EXIT_FAILURE);
+	}
+}
+
+/**
+ * nop_handler - handles the nop instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
+ */
+void nop_handler(stack_t **stack, unsigned int line_number)
+{
+	(void)stack;
+	(void)line_number;
 }

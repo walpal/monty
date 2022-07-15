@@ -1,74 +1,95 @@
 #include "monty.h"
 #include "lists.h"
 
-data_t data = DATA_INIT;
-
 /**
- * monty - helper function for main function
- * @args: pointer to struct of arguments from main
+ * get_func - selects the right function
+ * @parsed: line from the bytecode file passed to main
  *
- * Description: opens and reads from the file
- * containing the opcodes, and calls the function
- * that will find the corresponding executing function
+ * Return: pointer to the selected function, or NULL on failure
  */
-void monty(args_t *args)
+void (*get_func(char **parsed))(stack_t **, unsigned int)
 {
-	size_t len = 0;
-	int get = 0;
-	void (*code_func)(stack_t **, unsigned int);
+	instruction_t func_arr[] = {
+		{"push", push_handler},
+		{"pall", pall_handler},
+		{"pint", pint_handler},
+		{"pop", pop_handler},
+		{"swap", swap_handler},
+		{"add", add_handler},
+		{"nop", nop_handler},
+		{"sub", sub_handler},
+		{"div", div_handler},
+		{"mul", mul_handler},
+		{"mod", mod_handler},
+		{"pchar", pchar_handler},
+		{"pstr", pstr_handler},
+		{"rotl", rotl_handler},
+		{"rotr", rotr_handler},
+		{"stack", stack_handler},
+		{"queue", queue_handler},
+		{NULL, NULL}
+	};
 
-	if (args->ac != 2)
+	int codes = 17, i;
+
+	for (i = 0; i < codes; i++)
 	{
-		dprintf(STDERR_FILENO, USAGE);
-		exit(EXIT_FAILURE);
-	}
-	data.fptr = fopen(args->av, "r");
-	if (!data.fptr)
-	{
-		dprintf(STDERR_FILENO, FILE_ERROR, args->av);
-		exit(EXIT_FAILURE);
-	}
-	while (1)
-	{
-		args->line_number++;
-		get = getline(&(data.line), &len, data.fptr);
-		if (get < 0)
-			break;
-		data.words = strtow(data.line);
-		if (data.words[0] == NULL || data.words[0][0] == '#')
+		if (strcmp(func_arr[i].opcode, parsed[0]) == 0)
 		{
-			free_all(0);
-			continue;
+			return (func_arr[i].f);
 		}
-		code_func = get_func(data.words);
-		if (!code_func)
-		{
-			dprintf(STDERR_FILENO, UNKNOWN, args->line_number, data.words[0]);
-			free_all(1);
-			exit(EXIT_FAILURE);
-		}
-		code_func(&(data.stack), args->line_number);
-		free_all(0);
 	}
-	free_all(1);
+	return (NULL);
 }
 
 /**
- * main - entry point for monty bytecode interpreter
- * @argc: number of arguments
- * @argv: array of arguments
- *
- * Return: EXIT_SUCCESS or EXIT_FAILURE
+ * push_handler - handles the push instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
  */
-int main(int argc, char *argv[])
+void push_handler(stack_t **stack, unsigned int line_number)
 {
-	args_t args;
+	stack_t *new;
+	int num = 0, i;
 
-	args.av = argv[1];
-	args.ac = argc;
-	args.line_number = 0;
+	if (data.words[1] == NULL)
+	{
+		dprintf(STDERR_FILENO, PUSH_FAIL, line_number);
+		free_all(1);
+		exit(EXIT_FAILURE);
+	}
 
-	monty(&args);
+	for (i = 0; data.words[1][i]; i++)
+	{
+		if (isalpha(data.words[1][i]) != 0)
+		{
+			dprintf(STDERR_FILENO, PUSH_FAIL, line_number);
+			free_all(1);
+			exit(EXIT_FAILURE);
+		}
+	}
+	num = atoi(data.words[1]);
 
-	return (EXIT_SUCCESS);
+	if (data.qflag == 0)
+		new = add_dnodeint(stack, num);
+	else if (data.qflag == 1)
+		new = add_dnodeint_end(stack, num);
+	if (!new)
+	{
+		dprintf(STDERR_FILENO, MALLOC_FAIL);
+		free_all(1);
+		exit(EXIT_FAILURE);
+	}
+}
+
+/**
+ * pall_handler - handles the pall instruction
+ * @stack: double pointer to the stack to push to
+ * @line_number: number of the line in the file
+ */
+void pall_handler(stack_t **stack, unsigned int line_number)
+{
+	(void)line_number;
+	if (*stack)
+		print_dlistint(*stack);
 }
